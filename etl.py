@@ -2,7 +2,7 @@ import argparse
 import uuid
 
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, TypedDict
 from enum import Enum
 
 
@@ -11,6 +11,7 @@ class AGGREGATION_TYPES(Enum):
     AVERAGE = 2
 
 
+# TODO: to make this flexible, allow users to define "schemas" up front so they're writing type-validated records
 class Record(BaseModel):
     id_: uuid.UUID = Field(default_factory=uuid.uuid4)
     group: int
@@ -107,3 +108,14 @@ if __name__ == "__main__":
     aggregated_dataset.ingest(data=aggregated_data)
 
     print(aggregated_dataset)
+
+    Movie = TypedDict("Movie", {"name": str, "year": int})
+
+    print(Movie
+
+    print(x)
+
+    record_struct = TypedDict("rec", {"group": str, "value": int})
+    record: record_struct = {"group": 1, "value": 888}
+
+    print(record_struct)
