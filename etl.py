@@ -1,4 +1,6 @@
+import argparse
 import uuid
+
 from pydantic import BaseModel, Field
 from typing import List
 from enum import Enum
@@ -63,6 +65,7 @@ class Dataset(BaseModel):
             AGGREGATION_TYPES.AVERAGE: self.average,
         }
 
+        # TODO: when grouping on multiple columns, create a "composite key"
         extracted_data = [
             (getattr(record, on_field), record.value) for record in self.data
         ]
@@ -75,26 +78,32 @@ class Dataset(BaseModel):
 
 
 if __name__ == "__main__":
-    raw_data: List[Record] = [
+    _parser = argparse.ArgumentParser(
+        description="Specifying the column to aggregate over and the operation to perform"
+    )
+
+    _parser.add_argument(
+        "OnField", metavar="on_field", type=str, help="column to group by"
+    )
+    _parser.add_argument(
+        "AggType", metavar="agg_type", type=str, help="operation to perform"
+    )
+
+    args = _parser.parse_args()
+
+    raw_records: List[Record] = [
         Record(group=1, value=100),
         Record(group=2, value=200),
         Record(group=2, value=300),
     ]
 
-    raw_dataset: Dataset = Dataset(name_="my_raw_data", data=raw_data)
+    raw_dataset: Dataset = Dataset(name_="my_raw_data", data=raw_records)
 
-    summed_data = raw_dataset.aggregate(on_field="group", _type=AGGREGATION_TYPES.SUM)
-
-    averaged_data = raw_dataset.aggregate(
-        on_field="group", _type=AGGREGATION_TYPES.AVERAGE
+    aggregated_data = raw_dataset.aggregate(
+        on_field=args.OnField, _type=AGGREGATION_TYPES[args.AggType.upper()]
     )
 
-    summed_dataset = Dataset(name_="my_summed_data")
-    summed_dataset.ingest(data=summed_data)
+    aggregated_dataset = Dataset(name_="my_aggregated_data")
+    aggregated_dataset.ingest(data=aggregated_data)
 
-    averaged_dataset = Dataset(name_="my_averaged_data")
-    averaged_dataset.ingest(data=averaged_data)
-
-    print(summed_dataset)
-    print()
-    print(averaged_dataset)
+    print(aggregated_dataset)
