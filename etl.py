@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+import uuid
+from pydantic import BaseModel, Field
 from typing import List
 from enum import Enum
 
@@ -9,17 +10,19 @@ class AGGREGATION_TYPES(Enum):
 
 
 class Record(BaseModel):
-    id_: int
+    id_: uuid.UUID = Field(default_factory=uuid.uuid4)
+    group: int
     value: int
 
 
-class RawRecord(Record):
-    group: int
-
-
 class Dataset(BaseModel):
-    id_: int
+    id_: uuid.UUID = Field(default_factory=uuid.uuid4)
+    name_: str
     data: List[Record] = []
+
+    def ingest(self, data):
+        for group, value in data.items():
+            self.data.append(Record(group=group, value=value))
 
     def sum(self, data: List) -> dict:
 
@@ -68,18 +71,30 @@ class Dataset(BaseModel):
 
         if aggregation_pointer:
             result = aggregation_pointer(data=extracted_data)
-            print(result)
+            return result
 
 
 if __name__ == "__main__":
-    raw_data: List[RawRecord] = [
-        RawRecord(id_=1111, group=1, value=100),
-        RawRecord(id_=2222, group=2, value=200),
-        RawRecord(id_=3333, group=2, value=300),
+    raw_data: List[Record] = [
+        Record(group=1, value=100),
+        Record(group=2, value=200),
+        Record(group=2, value=300),
     ]
 
-    raw_dataset: Dataset = Dataset(id_=99, data=raw_data)
+    raw_dataset: Dataset = Dataset(name_="my_raw_data", data=raw_data)
 
-    raw_dataset.aggregate(on_field="group", _type=AGGREGATION_TYPES.SUM)
+    summed_data = raw_dataset.aggregate(on_field="group", _type=AGGREGATION_TYPES.SUM)
 
-    raw_dataset.aggregate(on_field="group", _type=AGGREGATION_TYPES.AVERAGE)
+    averaged_data = raw_dataset.aggregate(
+        on_field="group", _type=AGGREGATION_TYPES.AVERAGE
+    )
+
+    summed_dataset = Dataset(name_="my_summed_data")
+    summed_dataset.ingest(data=summed_data)
+
+    averaged_dataset = Dataset(name_="my_averaged_data")
+    averaged_dataset.ingest(data=averaged_data)
+
+    print(summed_dataset)
+    print()
+    print(averaged_dataset)
